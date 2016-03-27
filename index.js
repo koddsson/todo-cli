@@ -28,5 +28,9 @@ fetch(
 
    const formattedLines = notDoneItems.map(removeTodoMarkdown);
 
-   formattedLines.forEach(line => console.log(`- ${line}`));
+   if (formattedLines.length) {
+     formattedLines.forEach(line => console.log(`- ${line}`));
+   } else {
+     console.log('Nothing on your todo list! Good job! 🎉');
+   }
 });
