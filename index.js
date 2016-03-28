@@ -24,7 +24,11 @@ const userPass = (
 );
 
 const getItems = () => (
-  fetch(apiUrl).then(res => res.json()).then(json => {
+  fetch(apiUrl, {
+    headers: {
+      Authorization: `Basic ${new Buffer(userPass).toString('base64')}`,
+    },
+  }).then(res => res.json()).then(json => {
     return {
       items: new Buffer(json.content, 'base64').toString('ascii').split('\n'),
       sha: json.sha,
