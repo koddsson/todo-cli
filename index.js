@@ -1,7 +1,7 @@
 const fetch = require('node-fetch');
 const fs = require('fs');
 
-const configData = fs.readFileSync('.github-auth.json', 'utf8');
+const configData = fs.readFileSync(`${__dirname}/.github-auth.json`, 'utf8');
 const config = JSON.parse(configData);
 
 // XXX: Get some nice CLI utils to deal with all this.
