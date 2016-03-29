@@ -1,8 +1,10 @@
-const fetch = require('node-fetch');
 const fs = require('fs');
+const program = require('commander');
 
 const configData = fs.readFileSync(`${__dirname}/.github-auth.json`, 'utf8');
 const config = JSON.parse(configData);
+
+const api = require('./api')(config);
 
 // XXX: Get some nice CLI utils to deal with all this.
 const command = process.argv[2];
@@ -16,76 +18,67 @@ const removeTodoMarkdown = (line) => {
   return removeTodoMarkdown(line.substr(1));
 };
 
-const apiUrl = (
-  `https://api.github.com/repos/${config.username}/todo/contents/todo.md`
-);
-const userPass = (
-  `${config.username}:${config.password}`
-);
+program
+  .version('0.0.1')
+  .option('-d', '--debug', 'Output debug information');
 
-const getItems = () => (
-  fetch(apiUrl, {
-    headers: {
-      Authorization: `Basic ${new Buffer(userPass).toString('base64')}`,
-    },
-  }).then(res => res.json()).then(json => {
-    return {
-      items: new Buffer(json.content, 'base64').toString('ascii').split('\n'),
-      sha: json.sha,
-    };
-  })
-);
+program
+  .command('list')
+  .description('Lists up all the items on the todo list')
+  .action(function() {
+    api.getItems(config).then(json => {
+      const items = json.items;
+      const notDoneItems = items.filter(item => {
+        return item.includes('- [ ]') || item.includes('-[ ]');
+      });
+      const formattedLines = notDoneItems.map(removeTodoMarkdown);
 
-const setItems = (contents, sha) => {
-  fetch(apiUrl, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Basic ${new Buffer(userPass).toString('base64')}`,
-    },
-    body: JSON.stringify({
-      message: 'Add a new TODO item',
-      content: new Buffer(contents.filter(x => x).join('\n')).toString('base64'),
-      sha: sha,
-    }),
-  }).then(res => {
-    return res.text();
-  });
-};
-
-if (command === 'mark') {
-  getItems().then(json => {
-    const doneItems = json.items.filter(item => {
-      return item.includes('- [x]') || item.includes('-[x]');
-    });
-    const notDoneItems = json.items.filter(item => {
-      return item.includes('- [ ]') || item.includes('-[ ]');
-    });
-    const newItems = notDoneItems.map((item, index) => {
-      if (Number(args[0]) === index + 1) {
-        return `- [x] ${removeTodoMarkdown(item)}`;
+      if (formattedLines.length) {
+        formattedLines.forEach((item, index) => console.log(`${index + 1}. ${item}`));
+      } else {
+        console.log('Nothing on your todo list! Good job! 🎉');
       }
-      return item;
     });
-    setItems(newItems.concat(doneItems), json.sha);
   });
-} else if (command === 'add') {
-  getItems().then(json => {
-    const items = json.items;
-    items.push(`- [ ] ${args[0]}`);
-    setItems(items, json.sha).then(text => console.log(text));
-  });
-} else {
-  getItems().then(json => {
-    const items = json.items;
-    const notDoneItems = items.filter(item => {
-      return item.includes('- [ ]') || item.includes('-[ ]');
-    });
-    const formattedLines = notDoneItems.map(removeTodoMarkdown);
 
-    if (formattedLines.length) {
-      formattedLines.forEach((item, index) => console.log(`${index + 1}. ${item}`));
-    } else {
-      console.log('Nothing on your todo list! Good job! 🎉');
-    }
+program
+  .command('add [item]')
+  .description('Add a item to the todo list')
+  .action(function(item) {
+    api.getItems(config).then(json => {
+      const items = json.items;
+      items.push(`- [ ] ${item}`);
+      api.setItems(items, json.sha, config).then(text => {
+        if (program.debug) {
+          console.log(text);
+        }
+      });
+    });
   });
+
+program
+  .command('mark [item]')
+  .description('Mark a item as done')
+  .action(function(item) {
+    api.getItems(config).then(json => {
+      const doneItems = json.items.filter(currentItem => {
+        return currentItem.includes('- [x]') || currentItem.includes('-[x]');
+      });
+      const notDoneItems = json.items.filter(currentItem => {
+        return currentItem.includes('- [ ]') || currentItem.includes('-[ ]');
+      });
+      const newItems = notDoneItems.map((currentItem, index) => {
+        if (Number(item) === index + 1) {
+          return `- [x] ${removeTodoMarkdown(currentItem)}`;
+        }
+        return currentItem;
+      });
+      api.setItems(newItems.concat(doneItems), json.sha);
+    });
+  });
+
+if (!process.argv.slice(2).length) {
+  program.outputHelp();
 }
+
+program.parse(process.argv);

@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "commander": "^2.9.0",
     "node-fetch": "^1.4.1"
   }
 }
