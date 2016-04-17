@@ -48,7 +48,7 @@ program
     api.getItems(config).then(json => {
       const items = json.items;
       items.push(`- [ ] ${item}`);
-      api.setItems(items, json.sha, config).then(text => {
+      api.setItems(items, json.sha, 'Add a item').then(text => {
         if (program.debug) {
           console.log(text);
         }
@@ -73,7 +73,9 @@ program
         }
         return currentItem;
       });
-      api.setItems(newItems.concat(doneItems), json.sha);
+      api.setItems(
+        newItems.concat(doneItems), json.sha, 'Marked a item as complete'
+      );
     });
   });
 

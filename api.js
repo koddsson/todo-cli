@@ -20,7 +20,7 @@ const getItems = (config) => {
   })
 };
 
-const setItems = (config, contents, sha) => {
+const setItems = (config, contents, sha, message) => {
   const apiUrl = (
     `https://api.github.com/repos/${config.username}/todo/contents/todo.md`
   );
@@ -34,9 +34,9 @@ const setItems = (config, contents, sha) => {
       Authorization: `Basic ${new Buffer(userPass).toString('base64')}`,
     },
     body: JSON.stringify({
-      message: 'Add a new TODO item',
+      message,
       content: new Buffer(contents.filter(x => x).join('\n')).toString('base64'),
-      sha: sha,
+      sha,
     }),
   }).then(res => {
     return res.text();
